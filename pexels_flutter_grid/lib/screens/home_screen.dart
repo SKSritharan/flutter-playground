@@ -4,26 +4,45 @@ import '../services/api_service.dart';
 import '../widgets/full_image_screen.dart';
 import '../widgets/loading_effect.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    ApiService apiService = ApiService();
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-    void showFullImage(String imagePath, String imageTag) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          opaque: false,
-          pageBuilder: (BuildContext context, _, __) => FullImageScreen(
-            imagePath: imagePath,
-            imageTag: imageTag,
-            backgroundOpacity: 200,
-          ),
+class _HomeScreenState extends State<HomeScreen> {
+  ApiService apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  int pageSize = 25;
+
+  void showFullImage(String imagePath, String imageTag) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (BuildContext context, _, __) => FullImageScreen(
+          imagePath: imagePath,
+          imageTag: imageTag,
+          backgroundOpacity: 200,
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        // apiService.fetchImages(pageSize);
+        debugPrint('You scrolled max');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 20),
@@ -48,7 +67,7 @@ class HomeScreen extends StatelessWidget {
               horizontal: 8.0,
             ),
             child: FutureBuilder(
-              future: apiService.fetchImages(),
+              future: apiService.fetchImages(pageSize),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const LoadingEffect();
@@ -68,6 +87,7 @@ class HomeScreen extends StatelessWidget {
                         mainAxisSpacing: 8.0,
                       ),
                       itemCount: imageUrls.length,
+                      controller: _scrollController,
                       itemBuilder: (BuildContext context, int index) {
                         return InkWell(
                           onTap: () {

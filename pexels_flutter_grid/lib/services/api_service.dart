@@ -4,9 +4,10 @@ import 'package:http/http.dart' as http;
 import '../constants.dart';
 
 class ApiService {
-  Future<List<String>> fetchImages() async {
+
+  Future<List<String>> fetchImages(pageSize) async {
     final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/curated?per_page=25'),
+      Uri.parse('${AppConstants.baseUrl}/curated?per_page=$pageSize'),
       headers: {'Authorization': AppConstants.apiKey},
     );
 
