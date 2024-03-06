@@ -1,7 +1,9 @@
+import 'package:ai_chat_bot/widgets/custom_text_composer.dart';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-import 'package:ai_chat_bot/widgets/chat_message.dart';
+import 'package:ai_chat_bot/models/chat_message.dart';
+import 'package:ai_chat_bot/widgets/chat_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -11,18 +13,29 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  static const String apiKey = 'AIzaSyD6vlXIWt9qsCuGLsHdnT-Ncd9Vah3hoYo';
-
-  final model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey);
+  static String? apiKey;
+  late GenerativeModel model;
 
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = <ChatMessage>[];
 
+  @override
+  void initState() {
+    _initModel();
+    super.initState();
+  }
+
+  void _initModel() async {
+    apiKey = const String.fromEnvironment('API_KEY');
+    model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey!);
+  }
+
   void _handleSubmitted(String text) async {
     _textController.clear();
     ChatMessage message = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
-      name: "User",
+      isMe: true,
       timestamp: DateTime.now(),
     );
 
@@ -36,17 +49,20 @@ class _ChatScreenState extends State<ChatScreen> {
       return Future.error(error!);
     }).catchError((error) {
       message = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: "Error: Failed to generate response.",
-        name: "AI",
+        isMe: false,
         timestamp: DateTime.now(),
       );
       setState(() {
         _messages.insert(0, message);
       });
+      throw error;
     }).then((value) {
       message = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: value.text!,
-        name: "AI",
+        isMe: false,
         timestamp: DateTime.now(),
       );
       setState(() {
@@ -55,34 +71,15 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Widget _buildTextComposer() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Row(
-        children: <Widget>[
-          Flexible(
-            child: TextField(
-              controller: _textController,
-              onSubmitted: _handleSubmitted,
-              decoration: const InputDecoration.collapsed(
-                hintText: 'Enter your message...',
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: () => _handleSubmitted(_textController.text),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Chat Bot'),
+        title: Text(
+          'AI Chat Bot',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        centerTitle: true,
       ),
       body: Column(
         children: <Widget>[
@@ -91,12 +88,21 @@ class _ChatScreenState extends State<ChatScreen> {
               reverse: true,
               itemCount: _messages.length,
               itemBuilder: (BuildContext context, int index) {
-                return _messages[index];
+                return ChatBubble(
+                  id: _messages[index].id,
+                  text: _messages[index].text,
+                  isMe: _messages[index].isMe,
+                  timestamp: _messages[index].timestamp,
+                );
               },
             ),
           ),
-          const Divider(height: 1.0),
-          _buildTextComposer(),
+          const SizedBox(height: 1),
+          CustomTextComposer(
+            hintText: 'Enter your message...',
+            textController: _textController,
+            handleSubmitted: _handleSubmitted,
+          ),
         ],
       ),
     );
